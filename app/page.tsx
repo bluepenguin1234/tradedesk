@@ -10,12 +10,12 @@ const features = [
 ];
 
 const proFeatures = [
-  "Unlimited contacts & CRM",
-  "Unlimited quotes + invoices",
-  "Project status tracking",
-  "Online payment collection",
+  "Quote builder with online client signing",
+  "Invoices with online card payments",
   "Automated invoice reminders",
-  "Client history & notes",
+  "Project status tracking",
+  "Client organizer with full history",
+  "Unlimited quotes, invoices & clients",
 ];
 
 const websiteFeatures = [

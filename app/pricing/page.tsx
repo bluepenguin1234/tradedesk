@@ -3,12 +3,12 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 
 const proFeatures = [
-  "Unlimited contacts & CRM",
-  "Unlimited quotes + invoices",
-  "Project status tracking",
-  "Online payment collection (Stripe)",
+  "Quote builder with online client signing",
+  "Invoices with online card payments",
   "Automated invoice reminders",
-  "Client history & notes",
+  "Project status tracking",
+  "Client organizer with full history",
+  "Unlimited quotes, invoices & clients",
   "Search across all records",
   "Email & chat support",
 ];
