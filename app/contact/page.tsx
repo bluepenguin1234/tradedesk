@@ -12,7 +12,6 @@ const trades = [
 const included = [
   'Services & pricing section',
   'Contact info & map',
-  'Online booking link',
   'Mobile-optimised design',
   'Hosted & maintained for you',
 ];

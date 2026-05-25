@@ -24,10 +24,10 @@ export default function SignUp() {
             </p>
             <div className="space-y-4">
               {[
-                "AI email drafting from day one",
                 "Unlimited quotes and invoices",
                 "Client organizer and pipeline",
-                "Online booking calendar",
+                "Project status tracking",
+                "Online invoice payments via Stripe",
               ].map((f) => (
                 <div key={f} className="flex items-center gap-3 text-sm text-[#374151] font-light">
                   <svg className="w-4 h-4 text-[#15803d] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
