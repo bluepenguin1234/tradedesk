@@ -24,37 +24,38 @@ npm run dev -- --port 4000
 
 ```
 app/
-├── page.tsx                  # Landing page
-├── pricing/                  # Pricing page
-├── sign-up/                  # Sign-up form
-├── login/                    # Login form
-├── quotes/[id]/              # Public client quote acceptance page
+├── (marketing)/              # Public marketing pages
+│   ├── page.tsx              # / — landing page
+│   ├── pricing/              # /pricing
+│   ├── sign-up/              # /sign-up
+│   └── login/               # /login
 ├── dashboard/                # Contractor app (auth-protected)
 │   ├── layout.tsx            # Sidebar shell
-│   ├── page.tsx              # Overview
+│   ├── page.tsx              # /dashboard — overview
 │   ├── quotes/               # Quote builder
 │   ├── invoices/             # Invoicing & payments
 │   ├── projects/             # Project status tracker
 │   └── clients/              # Client organizer
-└── api/
-    ├── onboard/              # Sign-up → Stripe → Supabase
-    ├── auth/                 # Login / logout
-    ├── stripe/connect/       # Stripe Connect onboarding
-    ├── webhooks/stripe/      # Stripe webhook handler
-    ├── quotes/               # Quote CRUD + send + accept
-    ├── invoices/             # Invoice CRUD + send
-    ├── clients/              # Client CRUD
-    ├── projects/             # Project CRUD
-    └── cron/                 # Trial email + invoice reminder crons
+├── quotes/[id]/              # /quotes/[id] — public client quote acceptance
+├── api/
+│   ├── onboard/              # Sign-up → Stripe → Supabase
+│   ├── auth/                 # Login / logout
+│   ├── stripe/connect/       # Stripe Connect onboarding
+│   ├── webhooks/stripe/      # Stripe webhook handler
+│   ├── quotes/               # Quote CRUD + send + accept
+│   ├── invoices/             # Invoice CRUD + send
+│   ├── clients/              # Client CRUD
+│   ├── projects/             # Project CRUD
+│   └── cron/                 # Trial emails + invoice reminders
+├── layout.tsx                # Root layout (fonts, metadata)
+├── globals.css
+└── favicon.ico
 
-components/     # Nav, Footer
-lib/            # supabase.ts, stripe.ts, resend.ts
-docs/           # Design spec
+components/                   # Nav, Footer
+lib/                          # supabase.ts, stripe.ts, resend.ts
+types/                        # Shared TypeScript types
+docs/                         # Design spec
 ```
-
-## Environment Variables
-
-Copy `.env.local.example` to `.env.local` and fill in your keys. See `CLAUDE.md` for the full setup checklist.
 
 ## Build Checklist
 
