@@ -55,7 +55,7 @@ export default function Home() {
               See what&apos;s included
             </Link>
           </div>
-          <p className="mt-5 text-xs text-[#d1d5db] font-light tracking-wide">No contracts · Cancel anytime · Card required after trial</p>
+          <p className="mt-5 text-xs text-[#d1d5db] font-light tracking-wide">No contracts · Cancel anytime</p>
         </div>
       </section>
 
