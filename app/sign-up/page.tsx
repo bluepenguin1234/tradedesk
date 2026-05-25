@@ -41,7 +41,7 @@ export default function SignUp() {
 
           {/* Right — form */}
           <div className="border border-[#e5e7eb] rounded-2xl p-8 bg-white">
-            <form className="space-y-5">
+            <form action="/api/onboard" method="POST" className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-[#9ca3af] uppercase tracking-[0.15em] font-medium mb-2">First name</label>
