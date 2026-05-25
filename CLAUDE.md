@@ -1,5 +1,3 @@
-@AGENTS.md
-
 # TradeDesk — Project Overview & Build Checklist
 
 ## What This Is
@@ -8,7 +6,7 @@ TradeDesk is a focused SaaS platform for solo contractors (any trade). It replac
 
 **Brand promise:** "The admin you never had."
 **Price:** $97/mo · First month free · No contracts
-**Design spec:** `docs/superpowers/specs/2026-05-25-tradedesk-design.md`
+**Design spec:** `docs/design-spec.md`
 **Dev server:** `npm run dev -- --port 4000` → http://localhost:4000
 
 ---
@@ -70,14 +68,35 @@ Brian's team builds and hosts a 1-page contractor website as a separate paid ser
 - `/` — landing page: hero, pricing (Pro + website add-on), 4-feature grid, footer CTA
 - `/pricing` — Pro card + website add-on card, FAQ section
 - `/sign-up` — onboarding form (name, email, trade, password)
-- `/done-for-you` — redirects to `/sign-up`
+- `/login` — login form
 - `components/Nav.tsx` — sticky nav with logo, Features, Pricing, Log in, Try free
 - `components/Footer.tsx` — footer with links and copyright
+
+### App Shell (stubs — UI exists, logic not wired up)
+- `app/dashboard/layout.tsx` — sidebar nav shell
+- `app/dashboard/page.tsx` — overview with quick actions + Stripe Connect banner
+- `app/dashboard/quotes/` — list, new, detail pages (stubs)
+- `app/dashboard/invoices/` — list, new, detail pages (stubs)
+- `app/dashboard/projects/` — list, new, detail pages (stubs)
+- `app/dashboard/clients/` — list, new, detail pages (stubs)
+- `app/quotes/[id]/page.tsx` — public client quote acceptance page (stub)
+
+### API Routes (stubs — files exist, logic not implemented)
+- All routes under `app/api/` exist with correct HTTP methods and TODO comments
+
+### Utilities (complete)
+- `lib/supabase.ts` — Supabase client
+- `lib/stripe.ts` — Stripe client
+- `lib/resend.ts` — Resend client + sendEmail helper
+- `middleware.ts` — protects `/dashboard/*` routes
+- `vercel.json` — cron schedule for trial emails + invoice reminders
+- `types/index.ts` — all TypeScript interfaces (Profile, Client, Project, Quote, Invoice)
 
 ### Project Config (complete)
 - Next.js 15 + Tailwind CSS + TypeScript scaffolded
 - ESLint configured
 - Packages installed: `@supabase/supabase-js`, `stripe`, `resend`
+- GitHub: https://github.com/bluepenguin1234/tradedesk
 
 ---
 
@@ -224,7 +243,7 @@ create policy "own rows" on invoices for all using (auth.uid() = user_id);
 - [ ] Run schema SQL in Supabase SQL editor
 - [ ] Confirm all 5 tables exist with correct columns
 - [ ] Confirm RLS enabled and policies created on all 5 tables
-- [ ] Create `lib/supabase.ts` — Supabase client singleton (server + browser variants)
+- [x] `lib/supabase.ts` — exists (basic client, may need server variant for middleware)
 
 ---
 
@@ -239,8 +258,8 @@ Contractor signs up → Stripe customer created → Pro subscription with 30-day
 - [ ] Create webhook endpoint in Stripe: `https://yourdomain.com/api/webhooks/stripe`
 - [ ] Set webhook to listen for: `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`
 - [ ] Copy webhook signing secret → `STRIPE_WEBHOOK_SECRET`
-- [ ] Create `lib/stripe.ts` — Stripe client singleton
-- [ ] Create `app/api/webhooks/stripe/route.ts` — handles all Stripe events, updates Supabase
+- [x] `lib/stripe.ts` — exists
+- [x] `app/api/webhooks/stripe/route.ts` — stub exists, logic needs implementing
 
 **Webhook handler logic:**
 - `customer.subscription.updated` → update `subscription_status` in `profiles`
@@ -261,9 +280,9 @@ Each contractor connects their own Stripe account. When they send an invoice, Tr
 - [ ] Add redirect URL: `https://yourdomain.com/api/stripe/connect/callback`
 
 **Files to create:**
-- [ ] `app/api/stripe/connect/route.ts` — creates Stripe Express account + generates onboarding link → redirects contractor to Stripe's hosted onboarding
-- [ ] `app/api/stripe/connect/callback/route.ts` — Stripe redirects here after onboarding completes → save `stripe_connect_account_id` and set `stripe_connect_onboarded = true` in `profiles`
-- [ ] Dashboard banner: if `stripe_connect_onboarded = false`, show "Connect Stripe to collect payments" prompt linking to `/api/stripe/connect`
+- [x] `app/api/stripe/connect/route.ts` — stub exists, logic needs implementing
+- [x] `app/api/stripe/connect/callback/route.ts` — stub exists, logic needs implementing
+- [x] Dashboard banner — already shown on `app/dashboard/page.tsx` (stub)
 
 ---
 
@@ -282,12 +301,12 @@ Each contractor connects their own Stripe account. When they send an invoice, Tr
 10. Redirect to `/dashboard`
 
 **Files to create:**
-- [ ] `app/api/onboard/route.ts` — full sign-up handler (steps 3–10 above)
-- [ ] `middleware.ts` — protect all `/dashboard/*` routes; unauthenticated → redirect to `/login`
-- [ ] `app/login/page.tsx` — login form (email + password fields, white/green design)
-- [ ] `app/api/auth/login/route.ts` — `supabase.auth.signInWithPassword`, set session cookie
-- [ ] `app/api/auth/logout/route.ts` — `supabase.auth.signOut`, clear session, redirect to `/`
-- [ ] `app/dashboard/layout.tsx` — dashboard shell: left sidebar nav (Dashboard, Clients, Quotes, Invoices, Projects), top bar with user name + logout button
+- [x] `app/api/onboard/route.ts` — stub exists, logic needs implementing
+- [x] `middleware.ts` — stub exists (needs Supabase session check wired up)
+- [x] `app/login/page.tsx` — UI complete
+- [x] `app/api/auth/login/route.ts` — stub exists, logic needs implementing
+- [x] `app/api/auth/logout/route.ts` — stub exists, logic needs implementing
+- [x] `app/dashboard/layout.tsx` — sidebar shell complete
 
 **Sidebar nav links:**
 - `/dashboard` — Overview
@@ -318,9 +337,9 @@ A daily cron job (Vercel Cron) queries Supabase for contractors at specific tria
 | Invoice overdue | "Invoice #NNN is overdue." | Sent to client (not contractor) on due date + 1 |
 
 **Files to create:**
-- [ ] `lib/resend.ts` — Resend client + typed `sendEmail(to, subject, html)` helper
-- [ ] `app/api/cron/trial-emails/route.ts` — daily handler: query `profiles` where `trial_ends_at` matches milestones → send correct email
-- [ ] `vercel.json` — configure Vercel Cron:
+- [x] `lib/resend.ts` — exists with sendEmail helper
+- [x] `app/api/cron/trial-emails/route.ts` — stub exists, query logic needs implementing
+- [x] `vercel.json` — cron schedule already configured:
 ```json
 {
   "crons": [
