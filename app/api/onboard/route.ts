@@ -3,10 +3,6 @@ import { createAdminClient, createSupabaseServerClient } from '@/lib/supabase';
 import { stripe } from '@/lib/stripe';
 import { sendEmail } from '@/lib/resend';
 
-function redirect(url: string, req: NextRequest) {
-  return NextResponse.redirect(new URL(url, req.url), { status: 303 });
-}
-
 export async function POST(req: NextRequest) {
   const form = await req.formData();
   const firstName = (form.get('firstName') as string)?.trim();
@@ -16,11 +12,11 @@ export async function POST(req: NextRequest) {
   const password = form.get('password') as string;
 
   if (!firstName || !lastName || !email || !trade || !password) {
-    return redirect('/sign-up?error=missing_fields', req);
+    return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
   }
 
   if (password.length < 8) {
-    return redirect('/sign-up?error=password_short', req);
+    return NextResponse.json({ error: 'password_short' }, { status: 400 });
   }
 
   const admin = createAdminClient();
@@ -34,37 +30,45 @@ export async function POST(req: NextRequest) {
 
   if (authError || !authData.user) {
     const code = authError?.message?.includes('already registered') ? 'email_taken' : 'auth_error';
-    return redirect(`/sign-up?error=${code}`, req);
+    return NextResponse.json({ error: code }, { status: 400 });
   }
 
   const userId = authData.user.id;
 
-  const customer = await stripe.customers.create({
-    email,
-    name: `${firstName} ${lastName}`,
-    metadata: { supabase_id: userId },
-  });
+  try {
+    const customer = await stripe.customers.create({
+      email,
+      name: `${firstName} ${lastName}`,
+      metadata: { supabase_id: userId },
+    });
 
-  const subscription = await stripe.subscriptions.create({
-    customer: customer.id,
-    items: [{ price: process.env.STRIPE_PRO_PRICE_ID! }],
-    trial_period_days: 30,
-  });
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: process.env.STRIPE_PRO_PRICE_ID! }],
+      trial_period_days: 30,
+    });
 
-  const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  await admin.from('profiles').insert({
-    id: userId,
-    first_name: firstName,
-    last_name: lastName,
-    trade,
-    stripe_customer_id: customer.id,
-    stripe_subscription_id: subscription.id,
-    subscription_status: 'trialing',
-    trial_ends_at: trialEndsAt,
-  });
+    await admin.from('profiles').insert({
+      id: userId,
+      first_name: firstName,
+      last_name: lastName,
+      trade,
+      stripe_customer_id: customer.id,
+      stripe_subscription_id: subscription.id,
+      subscription_status: 'trialing',
+      trial_ends_at: trialEndsAt,
+    });
+  } catch (err) {
+    // Clean up the auth user if Stripe/DB fails
+    await admin.auth.admin.deleteUser(userId);
+    console.error('Onboard error:', err);
+    return NextResponse.json({ error: 'auth_error' }, { status: 500 });
+  }
 
-  await sendEmail(
+  // Send welcome email (non-blocking — don't fail if this errors)
+  sendEmail(
     email,
     "You're in. Here's how to get started.",
     `<p>Hi ${firstName},</p>
@@ -77,14 +81,15 @@ export async function POST(req: NextRequest) {
     </ol>
     <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard">Go to your dashboard →</a></p>
     <p>— The TradeDesk team</p>`
-  );
+  ).catch(console.error);
 
+  // Sign in to set session cookies
   const supabase = await createSupabaseServerClient();
   const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
   if (signInError) {
-    return redirect('/login', req);
+    return NextResponse.json({ error: 'auth_error' }, { status: 500 });
   }
 
-  return redirect('/dashboard', req);
+  return NextResponse.json({ ok: true });
 }
