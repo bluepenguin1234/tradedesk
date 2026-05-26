@@ -29,8 +29,9 @@ export async function POST(req: NextRequest) {
   });
 
   if (authError || !authData.user) {
+    console.error('Supabase createUser error:', authError?.message, authError?.status);
     const code = authError?.message?.includes('already registered') ? 'email_taken' : 'auth_error';
-    return NextResponse.json({ error: code }, { status: 400 });
+    return NextResponse.json({ error: code, detail: authError?.message }, { status: 400 });
   }
 
   const userId = authData.user.id;
