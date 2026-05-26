@@ -73,6 +73,16 @@ export async function POST(req: NextRequest) {
 
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
+
+      // Subscription checkout: the contractor just added a card during sign-up.
+      // Record the subscription so we can track billing and charge after the trial.
+      if (session.mode === 'subscription' && session.subscription) {
+        await admin.from('profiles')
+          .update({ stripe_subscription_id: session.subscription as string })
+          .eq('stripe_customer_id', session.customer as string);
+        break;
+      }
+
       // Match by payment intent stored on invoice
       if (session.payment_intent) {
         const { data: invoice } = await admin.from('invoices')

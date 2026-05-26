@@ -43,6 +43,12 @@ export default function SignUp() {
         return;
       }
 
+      // Send them to Stripe to add a card (free for 30 days, charged on day 31).
+      if (json.checkoutUrl) {
+        window.location.href = json.checkoutUrl;
+        return;
+      }
+
       router.push('/dashboard');
     } catch {
       setError('Network error. Please check your connection and try again.');
