@@ -3,6 +3,10 @@ import { createAdminClient, createSupabaseServerClient } from '@/lib/supabase';
 import { stripe } from '@/lib/stripe';
 import { sendEmail } from '@/lib/resend';
 
+function redirect(url: string, req: NextRequest) {
+  return NextResponse.redirect(new URL(url, req.url), { status: 303 });
+}
+
 export async function POST(req: NextRequest) {
   const form = await req.formData();
   const firstName = (form.get('firstName') as string)?.trim();
@@ -12,16 +16,15 @@ export async function POST(req: NextRequest) {
   const password = form.get('password') as string;
 
   if (!firstName || !lastName || !email || !trade || !password) {
-    return NextResponse.redirect(new URL('/sign-up?error=missing_fields', req.url));
+    return redirect('/sign-up?error=missing_fields', req);
   }
 
   if (password.length < 8) {
-    return NextResponse.redirect(new URL('/sign-up?error=password_short', req.url));
+    return redirect('/sign-up?error=password_short', req);
   }
 
   const admin = createAdminClient();
 
-  // Create auth user
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
     email,
     password,
@@ -31,19 +34,17 @@ export async function POST(req: NextRequest) {
 
   if (authError || !authData.user) {
     const code = authError?.message?.includes('already registered') ? 'email_taken' : 'auth_error';
-    return NextResponse.redirect(new URL(`/sign-up?error=${code}`, req.url));
+    return redirect(`/sign-up?error=${code}`, req);
   }
 
   const userId = authData.user.id;
 
-  // Create Stripe customer
   const customer = await stripe.customers.create({
     email,
     name: `${firstName} ${lastName}`,
     metadata: { supabase_id: userId },
   });
 
-  // Start 30-day trial subscription
   const subscription = await stripe.subscriptions.create({
     customer: customer.id,
     items: [{ price: process.env.STRIPE_PRO_PRICE_ID! }],
@@ -52,7 +53,6 @@ export async function POST(req: NextRequest) {
 
   const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  // Insert profile
   await admin.from('profiles').insert({
     id: userId,
     first_name: firstName,
@@ -64,7 +64,6 @@ export async function POST(req: NextRequest) {
     trial_ends_at: trialEndsAt,
   });
 
-  // Welcome email
   await sendEmail(
     email,
     "You're in. Here's how to get started.",
@@ -80,13 +79,12 @@ export async function POST(req: NextRequest) {
     <p>— The TradeDesk team</p>`
   );
 
-  // Sign in and set session cookies
   const supabase = await createSupabaseServerClient();
   const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
   if (signInError) {
-    return NextResponse.redirect(new URL('/login', req.url));
+    return redirect('/login', req);
   }
 
-  return NextResponse.redirect(new URL('/dashboard', req.url));
+  return redirect('/dashboard', req);
 }

@@ -7,15 +7,15 @@ export async function POST(req: NextRequest) {
   const password = form.get('password') as string;
 
   if (!email || !password) {
-    return NextResponse.redirect(new URL('/login?error=missing_fields', req.url));
+    return NextResponse.redirect(new URL('/login?error=missing_fields', req.url), { status: 303 });
   }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return NextResponse.redirect(new URL('/login?error=invalid_credentials', req.url));
+    return NextResponse.redirect(new URL('/login?error=invalid_credentials', req.url), { status: 303 });
   }
 
-  return NextResponse.redirect(new URL('/dashboard', req.url));
+  return NextResponse.redirect(new URL('/dashboard', req.url), { status: 303 });
 }
