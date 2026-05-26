@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    await admin.from('profiles').insert({
+    const { error: profileError } = await admin.from('profiles').insert({
       id: userId,
       first_name: firstName,
       last_name: lastName,
@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
       subscription_status: 'trialing',
       trial_ends_at: trialEndsAt,
     });
+
+    if (profileError) throw profileError;
   } catch (err) {
     // Clean up the auth user if Stripe/DB fails
     await admin.auth.admin.deleteUser(userId);

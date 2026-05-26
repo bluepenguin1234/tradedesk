@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { createSupabaseServerClient, ensureProfile } from "@/lib/supabase";
 
 const navItems = [
   { href: "/dashboard", label: "Overview" },
@@ -8,7 +9,11 @@ const navItems = [
   { href: "/dashboard/clients", label: "Clients" },
 ];
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) await ensureProfile(user);
+
   return (
     <div className="min-h-screen bg-[#f9fafb] flex">
       <aside className="w-56 bg-white border-r border-[#e5e7eb] flex flex-col shrink-0 sticky top-0 h-screen">

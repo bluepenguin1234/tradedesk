@@ -38,3 +38,26 @@ export function createAdminClient() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }
+
+// Guarantees a profiles row exists for an authenticated user. clients, quotes,
+// invoices and projects all FK to profiles(id), so a missing profile makes
+// every create fail with a foreign key violation. Inserts a minimal row if
+// absent; leaves an existing profile untouched.
+type AuthedUser = {
+  id: string;
+  user_metadata?: { first_name?: string; last_name?: string; trade?: string };
+};
+
+export async function ensureProfile(user: AuthedUser) {
+  const admin = createAdminClient();
+  const meta = user.user_metadata ?? {};
+  await admin.from('profiles').upsert(
+    {
+      id: user.id,
+      first_name: meta.first_name ?? null,
+      last_name: meta.last_name ?? null,
+      trade: meta.trade ?? null,
+    },
+    { onConflict: 'id', ignoreDuplicates: true }
+  );
+}
