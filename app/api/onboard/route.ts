@@ -36,17 +36,13 @@ export async function POST(req: NextRequest) {
 
   const userId = authData.user.id;
 
+  let checkoutUrl: string;
+
   try {
     const customer = await stripe.customers.create({
       email,
       name: `${firstName} ${lastName}`,
       metadata: { supabase_id: userId },
-    });
-
-    const subscription = await stripe.subscriptions.create({
-      customer: customer.id,
-      items: [{ price: process.env.STRIPE_PRO_PRICE_ID! }],
-      trial_period_days: 30,
     });
 
     const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -57,10 +53,27 @@ export async function POST(req: NextRequest) {
       last_name: lastName,
       trade,
       stripe_customer_id: customer.id,
-      stripe_subscription_id: subscription.id,
       subscription_status: 'trialing',
       trial_ends_at: trialEndsAt,
     });
+
+    // Send the contractor to Stripe Checkout to put a card on file. The
+    // subscription starts with a 30-day trial, so $0 is due now, but the card
+    // is required so we can charge $97/mo when the trial ends on day 31.
+    const checkoutSession = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      customer: customer.id,
+      line_items: [{ price: process.env.STRIPE_PRO_PRICE_ID!, quantity: 1 }],
+      subscription_data: { trial_period_days: 30 },
+      payment_method_collection: 'always',
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?billing=incomplete`,
+    });
+
+    if (!checkoutSession.url) {
+      throw new Error('Stripe did not return a checkout URL');
+    }
+    checkoutUrl = checkoutSession.url;
   } catch (err) {
     // Clean up the auth user if Stripe/DB fails
     await admin.auth.admin.deleteUser(userId);
@@ -92,5 +105,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'auth_error' }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, checkoutUrl });
 }
