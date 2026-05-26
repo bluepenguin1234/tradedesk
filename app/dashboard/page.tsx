@@ -5,13 +5,32 @@ const quickActions = [
   { label: "New Project", href: "/dashboard/projects/new" },
 ];
 
-export default function Dashboard() {
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ billing?: string }>;
+}) {
+  const { billing } = await searchParams;
+  const billingIncomplete = billing === "incomplete";
+
   return (
     <div className="px-8 py-10 max-w-5xl">
       <h1 className="text-3xl text-[#0f0f0f] mb-1" style={{ fontFamily: "var(--font-serif)" }}>
         Overview
       </h1>
       <p className="text-[#9ca3af] text-sm font-light mb-10">Here&apos;s where everything stands.</p>
+
+      {/* Billing banner — shown if the card step was skipped during sign-up */}
+      {billingIncomplete && (
+        <div className="bg-[#fef2f2] border border-[#fecaca] rounded-xl px-5 py-4 flex items-center justify-between mb-8">
+          <p className="text-sm text-[#991b1b] font-light">
+            Your free month is active, but we don&apos;t have a card on file yet. Add one now so your account keeps working when the trial ends.
+          </p>
+          <a href="/api/stripe/billing" className="text-sm text-[#991b1b] font-medium underline shrink-0 ml-4">
+            Add a card →
+          </a>
+        </div>
+      )}
 
       {/* Stripe Connect banner — shown until connected */}
       <div className="bg-[#fefce8] border border-[#fde047] rounded-xl px-5 py-4 flex items-center justify-between mb-8">
