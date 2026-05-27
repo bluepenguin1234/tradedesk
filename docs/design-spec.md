@@ -41,7 +41,7 @@ TradeDesk is built on **GoHighLevel (GHL)** white-labeled as "TradeDesk." Contra
 
 ## Product Tiers
 
-### Pro — $97/mo (or $970/yr) · First month free
+### Pro — $29/mo + 0.5% transaction fee · First month free
 Main revenue driver. Card required at sign-up, not charged until month 2. Trial gives contractors full access — no artificial limits to work around.
 
 - Unlimited contacts and CRM

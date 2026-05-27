@@ -2,7 +2,7 @@
 
 > The admin you never had. Built for contractors.
 
-Quotes, invoices, project tracking, and client info — all in one place. $97/mo, first month free.
+Quotes, invoices, project tracking, and client info — all in one place. $29/mo + 0.5% on payments, first month free.
 
 ## Stack
 
