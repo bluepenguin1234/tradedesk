@@ -55,6 +55,7 @@ export default function Settings() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [portalBusy, setPortalBusy] = useState(false);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
 
   const [newPassword, setNewPassword] = useState('');
   const [passwordBusy, setPasswordBusy] = useState(false);
@@ -121,6 +122,19 @@ export default function Settings() {
     }
   }
 
+  async function handleCompleteSignup() {
+    setCheckoutBusy(true);
+    const res = await fetch('/api/subscription/checkout', { method: 'POST' });
+    setCheckoutBusy(false);
+    if (res.ok) {
+      const { url } = await res.json();
+      window.location.href = url;
+    } else {
+      const { error } = await res.json().catch(() => ({}));
+      alert(error ?? 'Could not start checkout.');
+    }
+  }
+
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
     if (newPassword.length < 8) {
@@ -176,7 +190,7 @@ export default function Settings() {
               {sub.text}
             </p>
           </div>
-          {profile?.stripe_subscription_id && (
+          {profile?.stripe_subscription_id ? (
             <button
               onClick={handleManageSubscription}
               disabled={portalBusy}
@@ -184,10 +198,20 @@ export default function Settings() {
             >
               {portalBusy ? 'Opening…' : 'Manage →'}
             </button>
+          ) : (
+            <button
+              onClick={handleCompleteSignup}
+              disabled={checkoutBusy}
+              className="shrink-0 bg-[#15803d] text-white px-4 py-2 rounded-full text-xs font-medium hover:bg-[#14532d] transition-colors disabled:opacity-50"
+            >
+              {checkoutBusy ? 'Opening…' : 'Complete signup →'}
+            </button>
           )}
         </div>
         <p className="text-[11px] text-[#9ca3af] mt-3 font-light">
-          Cancel, change payment method, or download invoices via Stripe's billing portal.
+          {profile?.stripe_subscription_id
+            ? "Cancel, change payment method, or download invoices via Stripe's billing portal."
+            : 'You need to add a payment method to start your 30-day free trial. No charge until day 31.'}
         </p>
       </div>
 
