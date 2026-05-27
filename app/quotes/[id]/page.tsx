@@ -17,7 +17,7 @@ interface QuoteData {
   accepted_at: string | null;
   accepted_name: string | null;
   clients: { name: string; email: string } | null;
-  profiles: { first_name: string; last_name: string; trade: string; business_name: string | null } | null;
+  profiles: { first_name: string; last_name: string; trade: string; business_name: string | null; logo_url: string | null } | null;
 }
 
 export default function PublicQuotePage() {
@@ -86,10 +86,20 @@ export default function PublicQuotePage() {
     <div className="min-h-screen bg-[#f9fafb]">
       <div className="max-w-2xl mx-auto px-6 py-12">
         {/* Header */}
-        <div className="mb-8">
-          <p className="text-xs text-[#9ca3af] uppercase tracking-widest mb-1">Quote from</p>
-          <h1 className="text-2xl font-medium text-[#0f0f0f]">{businessName}</h1>
-          {quote.profiles?.trade && <p className="text-sm text-[#6b7280]">{quote.profiles.trade}</p>}
+        <div className="mb-8 flex items-center gap-4">
+          {quote.profiles?.logo_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={quote.profiles.logo_url}
+              alt={`${businessName} logo`}
+              className="h-14 w-14 object-contain border border-[#e5e7eb] rounded-lg p-1.5 bg-white shrink-0"
+            />
+          )}
+          <div>
+            <p className="text-xs text-[#9ca3af] uppercase tracking-widest mb-1">Quote from</p>
+            <h1 className="text-2xl font-medium text-[#0f0f0f]">{businessName}</h1>
+            {quote.profiles?.trade && <p className="text-sm text-[#6b7280]">{quote.profiles.trade}</p>}
+          </div>
         </div>
 
         {/* Quote card */}

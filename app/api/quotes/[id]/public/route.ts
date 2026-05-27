@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { data, error } = await admin
     .from('quotes')
-    .select('*, clients(name, email), profiles(first_name, last_name, trade, business_name)')
+    .select('*, clients(name, email), profiles(first_name, last_name, trade, business_name, logo_url)')
     .eq('id', id)
     .single();
 

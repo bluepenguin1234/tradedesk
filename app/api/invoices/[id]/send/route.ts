@@ -12,7 +12,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data: invoice } = await supabase
     .from('invoices')
-    .select('*, clients(name, email), profiles(first_name, last_name, stripe_connect_account_id, stripe_connect_onboarded)')
+    .select('*, clients(name, email), profiles(first_name, last_name, stripe_connect_account_id, stripe_connect_onboarded, logo_url)')
     .eq('id', id)
     .eq('user_id', user.id)
     .single();
@@ -62,13 +62,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // 2. Send the email. If it fails, we leave the invoice as draft (no status flip, no link saved).
   //    The Payment Link is harmless if unused; user can retry which makes a new one.
   const contractorName = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim();
+  const logoUrl = profile?.logo_url ?? null;
   const dueText = invoice.due_date ? ` due ${new Date(invoice.due_date).toLocaleDateString()}` : '';
 
   try {
     await sendEmail(
       invoice.clients.email,
       `Invoice from ${contractorName} — $${invoice.total.toFixed(2)}${dueText}`,
-      `<p>Hi ${invoice.clients.name},</p>
+      `${logoUrl ? `<p><img src="${logoUrl}" alt="${contractorName}" style="max-height:60px;max-width:200px;object-fit:contain" /></p>` : ''}
+      <p>Hi ${invoice.clients.name},</p>
       <p>${contractorName} has sent you an invoice for $${invoice.total.toFixed(2)}${dueText}.</p>
       <p><a href="${paymentLink.url}" style="background:#15803d;color:#fff;padding:12px 24px;border-radius:24px;text-decoration:none;display:inline-block;">Pay Now →</a></p>
       <p style="color:#6b7280;font-size:12px;">You can pay securely by card, Apple Pay, or Google Pay.</p>`
