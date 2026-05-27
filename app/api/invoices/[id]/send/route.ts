@@ -18,7 +18,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .single();
 
   if (!invoice) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  if (!invoice.clients?.email) return NextResponse.json({ error: 'Client has no email address' }, { status: 400 });
+  if (!invoice.clients?.email) {
+    return NextResponse.json({ error: 'Client has no email address' }, { status: 400 });
+  }
 
   const profile = invoice.profiles;
   if (!profile?.stripe_connect_onboarded || !profile?.stripe_connect_account_id) {
@@ -27,6 +29,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       { status: 400 }
     );
   }
+
+  const origin = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
 
   // Build Stripe line items (amounts in cents)
   const stripeLineItems = (invoice.line_items as LineItem[]).map((item) => ({
@@ -38,17 +42,45 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     quantity: item.qty,
   }));
 
-  // Create Payment Link on the contractor's connected account
-  const paymentLink = await stripe.paymentLinks.create(
-    {
-      line_items: stripeLineItems,
-      metadata: { invoice_id: id },
-      after_completion: { type: 'redirect', redirect: { url: `${process.env.NEXT_PUBLIC_APP_URL}/invoice-paid` } },
-    },
-    { stripeAccount: profile.stripe_connect_account_id }
-  );
+  // 1. Create Payment Link on the contractor's connected account.
+  let paymentLink: { url: string };
+  try {
+    paymentLink = await stripe.paymentLinks.create(
+      {
+        line_items: stripeLineItems,
+        metadata: { invoice_id: id },
+        after_completion: { type: 'redirect', redirect: { url: `${origin}/invoice-paid` } },
+      },
+      { stripeAccount: profile.stripe_connect_account_id }
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Stripe rejected the payment link.';
+    console.error('Invoice payment link failed:', message);
+    return NextResponse.json({ error: `Stripe: ${message}`, code: 'stripe_failed' }, { status: 500 });
+  }
 
-  await supabase.from('invoices')
+  // 2. Send the email. If it fails, we leave the invoice as draft (no status flip, no link saved).
+  //    The Payment Link is harmless if unused; user can retry which makes a new one.
+  const contractorName = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim();
+  const dueText = invoice.due_date ? ` due ${new Date(invoice.due_date).toLocaleDateString()}` : '';
+
+  try {
+    await sendEmail(
+      invoice.clients.email,
+      `Invoice from ${contractorName} — $${invoice.total.toFixed(2)}${dueText}`,
+      `<p>Hi ${invoice.clients.name},</p>
+      <p>${contractorName} has sent you an invoice for $${invoice.total.toFixed(2)}${dueText}.</p>
+      <p><a href="${paymentLink.url}" style="background:#15803d;color:#fff;padding:12px 24px;border-radius:24px;text-decoration:none;display:inline-block;">Pay Now →</a></p>
+      <p style="color:#6b7280;font-size:12px;">You can pay securely by card, Apple Pay, or Google Pay.</p>`
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not send the email.';
+    console.error('Invoice email send failed:', message);
+    return NextResponse.json({ error: `Email failed: ${message}`, code: 'email_failed' }, { status: 500 });
+  }
+
+  // 3. Now persist the new state.
+  const { error: updateError } = await supabase.from('invoices')
     .update({
       stripe_payment_link: paymentLink.url,
       status: 'sent',
@@ -56,19 +88,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     })
     .eq('id', id);
 
-  const contractorName = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim();
-  const dueText = invoice.due_date
-    ? ` due ${new Date(invoice.due_date).toLocaleDateString()}`
-    : '';
-
-  await sendEmail(
-    invoice.clients.email,
-    `Invoice from ${contractorName} — $${invoice.total.toFixed(2)}${dueText}`,
-    `<p>Hi ${invoice.clients.name},</p>
-    <p>${contractorName} has sent you an invoice for $${invoice.total.toFixed(2)}${dueText}.</p>
-    <p><a href="${paymentLink.url}" style="background:#15803d;color:#fff;padding:12px 24px;border-radius:24px;text-decoration:none;display:inline-block;">Pay Now →</a></p>
-    <p style="color:#6b7280;font-size:12px;">You can pay securely by card, Apple Pay, or Google Pay.</p>`
-  );
+  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
   return NextResponse.json({ ok: true, payment_link: paymentLink.url });
 }
