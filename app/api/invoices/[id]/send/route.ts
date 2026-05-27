@@ -43,7 +43,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }));
 
   // 1. Create Payment Link on the contractor's connected account.
-  let paymentLink: { url: string };
+  let paymentLink: { id: string; url: string };
   try {
     paymentLink = await stripe.paymentLinks.create(
       {
@@ -79,10 +79,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: `Email failed: ${message}`, code: 'email_failed' }, { status: 500 });
   }
 
-  // 3. Now persist the new state.
+  // 3. Now persist the new state. We store BOTH the link URL (for surfacing
+  //    in the UI) and the link ID (so the webhook can match `session.payment_link`
+  //    back to this invoice when the client pays).
   const { error: updateError } = await supabase.from('invoices')
     .update({
       stripe_payment_link: paymentLink.url,
+      stripe_payment_link_id: paymentLink.id,
       status: 'sent',
       sent_at: new Date().toISOString(),
     })

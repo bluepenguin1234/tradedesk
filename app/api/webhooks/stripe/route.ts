@@ -4,18 +4,36 @@ import { createAdminClient } from '@/lib/supabase';
 import { sendEmail } from '@/lib/resend';
 import Stripe from 'stripe';
 
+// We register TWO Stripe webhook endpoints both pointing here:
+//   - a platform endpoint for events on the TradeDesk Stripe account (signups, subscription state)
+//   - a Connect endpoint for events on contractors' connected accounts (invoice payments)
+// Each has its own signing secret. We try both before rejecting.
+function verifyEvent(body: string, sig: string): Stripe.Event | null {
+  const secrets = [
+    process.env.STRIPE_WEBHOOK_SECRET,
+    process.env.STRIPE_WEBHOOK_SECRET_CONNECT,
+  ].filter((s): s is string => Boolean(s));
+
+  for (const secret of secrets) {
+    try {
+      return stripe.webhooks.constructEvent(body, sig, secret);
+    } catch {
+      // try the next secret
+    }
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text();
-  const sig = req.headers.get('stripe-signature')!;
+  const sig = req.headers.get('stripe-signature');
+  if (!sig) return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
 
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
-  } catch {
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
-  }
+  const event = verifyEvent(body, sig);
+  if (!event) return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
 
   const admin = createAdminClient();
+  const origin = process.env.NEXT_PUBLIC_APP_URL || '';
 
   switch (event.type) {
     case 'customer.subscription.updated': {
@@ -54,7 +72,6 @@ export async function POST(req: NextRequest) {
         .update({ subscription_status: 'past_due' })
         .eq('stripe_customer_id', inv.customer as string);
 
-      // Notify the contractor
       const { data: profile } = await admin.from('profiles')
         .select('first_name')
         .eq('stripe_customer_id', inv.customer as string)
@@ -65,7 +82,7 @@ export async function POST(req: NextRequest) {
           'Your TradeDesk payment failed',
           `<p>Hi ${profile?.first_name ?? ''},</p>
           <p>We couldn't process your TradeDesk subscription payment. Please update your payment method to keep your account active.</p>
-          <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard">Go to dashboard →</a></p>`
+          <p><a href="${origin}/dashboard">Go to dashboard →</a></p>`
         );
       }
       break;
@@ -74,7 +91,7 @@ export async function POST(req: NextRequest) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
 
-      // Signup subscription completion (mode=subscription)
+      // 1) Signup subscription completion (TradeDesk's $97/mo on platform account)
       if (session.mode === 'subscription' && session.subscription && session.customer) {
         const sub = await stripe.subscriptions.retrieve(session.subscription as string);
         const trialEndsAt = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null;
@@ -91,11 +108,16 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      // Invoice payment completion — match by payment intent stored on invoice
-      if (session.payment_intent) {
+      // 2) Invoice payment completion on a connected account — match by Payment Link ID.
+      //    Stripe sends `payment_link` on the session when the session was spawned by a Payment Link.
+      const linkId = typeof session.payment_link === 'string'
+        ? session.payment_link
+        : session.payment_link?.id ?? null;
+
+      if (linkId) {
         const { data: invoice } = await admin.from('invoices')
           .select('id, project_id, user_id, invoice_number, total')
-          .eq('stripe_payment_intent_id', session.payment_intent as string)
+          .eq('stripe_payment_link_id', linkId)
           .single();
 
         if (invoice) {
@@ -109,7 +131,7 @@ export async function POST(req: NextRequest) {
               .eq('id', invoice.project_id);
           }
 
-          // Notify contractor
+          // Notify the contractor — invoice.total is stored in dollars, not cents.
           const { data: profile } = await admin.from('profiles')
             .select('first_name, last_name')
             .eq('id', invoice.user_id)
@@ -120,8 +142,8 @@ export async function POST(req: NextRequest) {
               auth.user.email,
               `Invoice ${invoice.invoice_number} has been paid`,
               `<p>Hi ${profile?.first_name ?? ''},</p>
-              <p>Invoice ${invoice.invoice_number} for $${(invoice.total / 100).toFixed(2)} has been paid.</p>
-              <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/invoices/${invoice.id}">View invoice →</a></p>`
+              <p>Invoice ${invoice.invoice_number} for $${invoice.total.toFixed(2)} has been paid.</p>
+              <p><a href="${origin}/dashboard/invoices/${invoice.id}">View invoice →</a></p>`
             );
           }
         }
