@@ -22,7 +22,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const profile = invoice.profiles;
   if (!profile?.stripe_connect_onboarded || !profile?.stripe_connect_account_id) {
-    return NextResponse.json({ error: 'Connect your Stripe account before sending invoices' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Connect your Stripe account before sending invoices.', code: 'connect_required' },
+      { status: 400 }
+    );
   }
 
   // Build Stripe line items (amounts in cents)

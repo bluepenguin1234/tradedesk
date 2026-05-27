@@ -44,6 +44,7 @@ export default function InvoiceDetailPage() {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<EditForm>({
@@ -84,11 +85,13 @@ export default function InvoiceDetailPage() {
     if (!confirm(`Send this invoice to ${invoice?.clients?.name ?? 'the client'}? They'll get an email with a Stripe payment link.`)) return;
     setBusy(true);
     setError('');
+    setErrorCode('');
     const res = await fetch(`/api/invoices/${id}/send`, { method: 'POST' });
     setBusy(false);
     if (!res.ok) {
       const j = await res.json();
       setError(j.error ?? 'Could not send.');
+      setErrorCode(j.code ?? '');
       return;
     }
     const fresh = await fetch(`/api/invoices/${id}`).then(r => r.json());
@@ -178,7 +181,16 @@ export default function InvoiceDetailPage() {
         )}
       </div>
 
-      {error && <div className="mb-4 bg-red-50 border border-red-100 rounded-lg p-3"><p className="text-red-600 text-sm">{error}</p></div>}
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-100 rounded-lg p-3">
+          <p className="text-red-600 text-sm">
+            {error}
+            {errorCode === 'connect_required' && (
+              <> <a href="/api/stripe/connect" className="underline font-medium hover:text-red-700">Connect Stripe now →</a></>
+            )}
+          </p>
+        </div>
+      )}
 
       {editing ? (
         <>
