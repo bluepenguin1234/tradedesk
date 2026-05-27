@@ -35,7 +35,9 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = authData.user.id;
+  const origin = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
 
+  let checkoutUrl: string;
   try {
     const customer = await stripe.customers.create({
       email,
@@ -43,26 +45,33 @@ export async function POST(req: NextRequest) {
       metadata: { supabase_id: userId },
     });
 
-    const subscription = await stripe.subscriptions.create({
-      customer: customer.id,
-      items: [{ price: process.env.STRIPE_PRO_PRICE_ID! }],
-      trial_period_days: 30,
-    });
-
-    const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
     await admin.from('profiles').insert({
       id: userId,
       first_name: firstName,
       last_name: lastName,
       trade,
       stripe_customer_id: customer.id,
-      stripe_subscription_id: subscription.id,
-      subscription_status: 'trialing',
-      trial_ends_at: trialEndsAt,
+      subscription_status: 'incomplete',
     });
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      customer: customer.id,
+      line_items: [{ price: process.env.STRIPE_PRO_PRICE_ID!, quantity: 1 }],
+      subscription_data: {
+        trial_period_days: 30,
+        metadata: { supabase_id: userId },
+      },
+      payment_method_collection: 'always',
+      success_url: `${origin}/dashboard?welcome=1`,
+      cancel_url: `${origin}/pricing?canceled=1`,
+      metadata: { supabase_id: userId },
+    });
+
+    if (!session.url) throw new Error('Stripe did not return a checkout URL');
+    checkoutUrl = session.url;
   } catch (err) {
-    // Clean up the auth user if Stripe/DB fails
+    // Roll back the auth user if Stripe/DB setup fails
     await admin.auth.admin.deleteUser(userId);
     console.error('Onboard error:', err);
     return NextResponse.json({ error: 'auth_error' }, { status: 500 });
@@ -80,11 +89,11 @@ export async function POST(req: NextRequest) {
       <li>Create a quote</li>
       <li>Connect your Stripe account to accept payments</li>
     </ol>
-    <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard">Go to your dashboard →</a></p>
+    <p><a href="${origin}/dashboard">Go to your dashboard →</a></p>
     <p>— The TradeDesk team</p>`
   ).catch(console.error);
 
-  // Sign in to set session cookies
+  // Sign in so the session cookie is set before redirect — user lands logged in when they return from Stripe
   const supabase = await createSupabaseServerClient();
   const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -92,5 +101,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'auth_error' }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, checkout_url: checkoutUrl });
 }

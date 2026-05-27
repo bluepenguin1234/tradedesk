@@ -73,7 +73,25 @@ export async function POST(req: NextRequest) {
 
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
-      // Match by payment intent stored on invoice
+
+      // Signup subscription completion (mode=subscription)
+      if (session.mode === 'subscription' && session.subscription && session.customer) {
+        const sub = await stripe.subscriptions.retrieve(session.subscription as string);
+        const trialEndsAt = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null;
+        const status = sub.status === 'trialing' ? 'trialing'
+          : sub.status === 'active' ? 'active'
+          : 'incomplete';
+        await admin.from('profiles')
+          .update({
+            stripe_subscription_id: sub.id,
+            subscription_status: status,
+            trial_ends_at: trialEndsAt,
+          })
+          .eq('stripe_customer_id', session.customer as string);
+        break;
+      }
+
+      // Invoice payment completion — match by payment intent stored on invoice
       if (session.payment_intent) {
         const { data: invoice } = await admin.from('invoices')
           .select('id, project_id, user_id, invoice_number, total')

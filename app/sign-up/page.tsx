@@ -43,6 +43,11 @@ export default function SignUp() {
         return;
       }
 
+      if (json.checkout_url) {
+        window.location.href = json.checkout_url;
+        return;
+      }
+
       router.push('/dashboard');
     } catch {
       setError('Network error. Please check your connection and try again.');
