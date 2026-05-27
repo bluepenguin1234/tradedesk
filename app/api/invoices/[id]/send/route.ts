@@ -42,12 +42,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     quantity: item.qty,
   }));
 
+  // Platform fee: 0.5% of the total, sent back to TradeDesk's account.
+  // invoice.total is stored in dollars, application_fee_amount is in cents.
+  const applicationFeeAmount = Math.max(1, Math.round(invoice.total * 100 * 0.005));
+
   // 1. Create Payment Link on the contractor's connected account.
   let paymentLink: { id: string; url: string };
   try {
     paymentLink = await stripe.paymentLinks.create(
       {
         line_items: stripeLineItems,
+        application_fee_amount: applicationFeeAmount,
         metadata: { invoice_id: id },
         after_completion: { type: 'redirect', redirect: { url: `${origin}/invoice-paid` } },
       },

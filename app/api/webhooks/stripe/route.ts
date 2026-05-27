@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
 
-      // 1) Signup subscription completion (TradeDesk's $97/mo on platform account)
+      // 1) Signup subscription completion (TradeDesk's $29/mo on platform account)
       if (session.mode === 'subscription' && session.subscription && session.customer) {
         const sub = await stripe.subscriptions.retrieve(session.subscription as string);
         const trialEndsAt = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null;

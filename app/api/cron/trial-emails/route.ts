@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     } else if (days === 5) {
       await sendEmail(email, 'Your free month ends in 5 days', `
         <p>Hi ${name},</p>
-        <p>Just a heads up — your free trial ends in 5 days. After that, TradeDesk is $97/mo.</p>
+        <p>Just a heads up — your free trial ends in 5 days. After that, TradeDesk is $29/mo plus 0.5% on payments we process for you.</p>
         <p>If you want to cancel before then, just reply to this email.</p>
         <p><a href="${dashUrl}">Go to dashboard →</a></p>`
       );
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     } else if (days === 2) {
       await sendEmail(email, '2 days left on your trial', `
         <p>Hi ${name},</p>
-        <p>Your free trial ends in 2 days. Your card will be charged $97 on day 31 unless you cancel.</p>
+        <p>Your free trial ends in 2 days. Your card will be charged $29 on day 31 unless you cancel.</p>
         <p>Questions? Just reply to this email.</p>
         <p><a href="${dashUrl}">Go to dashboard →</a></p>`
       );

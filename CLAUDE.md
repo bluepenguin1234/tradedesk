@@ -7,7 +7,7 @@ _Last comprehensive update: 2026-05-27_
 TradeDesk is a focused SaaS for solo contractors (any trade). It replaces scattered Word docs, spreadsheets, and mental load with three things in one place: send a quote, send an invoice, get paid. The moat is **simplicity** — a 5-year-old can use it, deliberately less powerful than Jobber/Housecall Pro.
 
 **Brand promise:** "The admin you never had."
-**Price:** $97/mo · First month free · No contracts
+**Price:** $29/mo + 0.5% on invoice payments · First month free · No contracts
 **Design spec:** `docs/design-spec.md`
 **Design + plan docs:** `docs/superpowers/specs/`, `docs/superpowers/plans/`
 **Dev server:** `npm run dev -- --port 4000` → http://localhost:4000
@@ -27,7 +27,7 @@ TradeDesk is a focused SaaS for solo contractors (any trade). It replaces scatte
 | Database | Supabase (Postgres 17) | All app data |
 | Auth | Supabase Auth | Email/password sign-in |
 | File storage | Supabase Storage | Logo uploads (bucket: `logos`, public) |
-| Subscriptions | Stripe Checkout (subscription mode) | $97/mo Pro with 30-day free trial, card required upfront |
+| Subscriptions | Stripe Checkout (subscription mode) | $29/mo Pro with 30-day free trial, card required upfront |
 | Invoice payments | Stripe Connect Express | Contractors connect their own Stripe; clients pay directly to them via Payment Links |
 | Platform email | Resend | Welcome, quote send, invoice send, paid-notifications |
 
@@ -164,7 +164,7 @@ All 5 tables have RLS enabled. Policy: `auth.uid() = user_id` (or `id` for profi
 **Currently in test mode** (`sk_test_…`). To go live, swap four env vars:
 - `STRIPE_SECRET_KEY` (sk_test → sk_live)
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (pk_test → pk_live)
-- `STRIPE_PRO_PRICE_ID` (recreate $97/mo product in live mode)
+- `STRIPE_PRO_PRICE_ID` (recreate $29/mo product in live mode)
 - `STRIPE_WEBHOOK_SECRET` + `STRIPE_WEBHOOK_SECRET_CONNECT` (register live webhook endpoints, copy new secrets)
 
 ---
@@ -190,7 +190,7 @@ All 5 tables have RLS enabled. Policy: `auth.uid() = user_id` (or `id` for profi
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role JWT (admin client) |
 | `STRIPE_SECRET_KEY` | **Test mode** (`sk_test_…`) currently |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Test publishable key |
-| `STRIPE_PRO_PRICE_ID` | Test-mode $97/mo price |
+| `STRIPE_PRO_PRICE_ID` | Test-mode $29/mo price (`price_1Tbmp7EBZKt8k1Ze2VPB6cIn`) |
 | `STRIPE_WEBHOOK_SECRET` | For platform endpoint signature verify |
 | `STRIPE_WEBHOOK_SECRET_CONNECT` | For Connect endpoint signature verify (added 2026-05-27) |
 | `RESEND_API_KEY` | Real `re_…` key (fixed 2026-05-27 — was previously set to landing page text) |
@@ -276,15 +276,30 @@ All under `app/api/`. All `[id]` routes use Promise-typed params (Next.js 15 asy
 
 ## Revenue Math
 
-| Scenario | Monthly Revenue |
-|---|---|
-| Fixed cost (Supabase) | ~$30/mo |
-| Break even | 1 subscriber |
-| 10 subscribers | $970/mo |
-| 25 subscribers | $2,425/mo |
-| 50 subscribers | $4,850/mo |
-| 100 subscribers | $9,700/mo |
-| + Website hosting (10 sites × $50/mo) | +$500/mo |
+**Pricing:** $29/mo subscription + 0.5% application fee on every invoice payment processed through Stripe Connect.
+
+**Per contractor / month at varying revenue levels:**
+
+| Their monthly invoice volume | Sub | 0.5% fee | TradeDesk gets |
+|---|---|---|---|
+| $4k ($50k/yr) | $29 | $20 | **~$49** |
+| $8k ($100k/yr) | $29 | $40 | **~$69** |
+| $17k ($200k/yr) | $29 | $83 | **~$112** |
+| $40k ($500k/yr) | $29 | $200 | **~$229** |
+
+**At scale (assuming $200k/yr avg contractor):**
+
+| Subscribers | Subscription rev | 0.5% fee rev | Total /mo |
+|---|---|---|---|
+| Fixed cost (Supabase) | -$30 | | -$30 |
+| 1 (break even) | $29 | $83 | $112 |
+| 10 | $290 | $833 | $1,123 |
+| 25 | $725 | $2,083 | $2,808 |
+| 50 | $1,450 | $4,167 | $5,617 |
+| 100 | $2,900 | $8,333 | $11,233 |
+| + Website hosting (10 sites × $50/mo) | | | +$500/mo |
+
+Pricing self-balances: small contractors pay almost nothing (~$50/mo), successful ones pay more (~$200+/mo) without complaint because the fee scales with their actual revenue.
 
 ---
 

@@ -24,7 +24,11 @@ const websiteFeatures = [
 const faqs = [
   {
     q: "What happens after my free month?",
-    a: "Your card is charged on day 31 at $97/mo. You'll get a reminder email at day 25 and day 28. Cancel anytime before day 31 and you won't be charged.",
+    a: "Your card is charged on day 31 at $29/mo. You'll get a reminder email at day 25 and day 28. Cancel anytime before day 31 and you won't be charged.",
+  },
+  {
+    q: "What's the 0.5% fee?",
+    a: "When a client pays an invoice through TradeDesk, we charge a 0.5% platform fee on top of standard card processing. So on a $1,000 invoice you pay $5. Keeps the subscription cheap and aligns our incentives with yours — we make more when you make more.",
   },
   {
     q: "Do I need a credit card to start?",
@@ -77,10 +81,10 @@ export default function Pricing() {
                 <div>
                   <div className="text-xs text-[#15803d] uppercase tracking-[0.15em] font-medium mb-1.5">Pro</div>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-5xl font-semibold text-[#14532d]" style={{ fontFamily: "var(--font-sans)" }}>$97</span>
+                    <span className="text-5xl font-semibold text-[#14532d]" style={{ fontFamily: "var(--font-sans)" }}>$29</span>
                     <span className="text-[#9ca3af] text-sm font-light">/mo</span>
                   </div>
-                  <div className="text-[#6b7280] text-xs font-light mt-1">or $970/yr — save 2 months</div>
+                  <div className="text-[#6b7280] text-xs font-light mt-1">+ 0.5% on payments we process for you</div>
                 </div>
                 <div className="text-xs bg-[#15803d] text-white px-3 py-1.5 rounded-full font-medium shrink-0">
                   First month free

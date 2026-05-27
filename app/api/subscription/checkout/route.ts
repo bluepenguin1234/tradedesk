@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createSupabaseServerClient } from '@/lib/supabase';
 
-// Creates a Stripe Checkout Session for the $97/mo TradeDesk Pro plan with
+// Creates a Stripe Checkout Session for the $29/mo TradeDesk Pro plan with
 // 30-day trial. Used when an existing user needs to complete (or restart)
 // signup — e.g. they were backfilled with no subscription, or their previous
 // Checkout session expired.

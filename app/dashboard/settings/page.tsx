@@ -185,7 +185,7 @@ export default function Settings() {
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
             <p className="text-xs text-[#9ca3af] uppercase tracking-widest font-medium mb-1">Subscription</p>
-            <p className="text-sm text-[#0f0f0f] font-medium">TradeDesk Pro · $97/mo</p>
+            <p className="text-sm text-[#0f0f0f] font-medium">TradeDesk Pro · $29/mo + 0.5%</p>
             <p className={`inline-block mt-1.5 text-[11px] px-2.5 py-0.5 rounded-full font-medium border ${sub.color}`}>
               {sub.text}
             </p>
