@@ -1,4 +1,8 @@
+'use client';
+
 import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { JobCard, JobColumn } from '@/lib/jobs';
 
 const sections: { column: JobColumn; label: string; sub: string }[] = [
@@ -65,19 +69,42 @@ function TodoCardView({ card }: { card: JobCard }) {
 }
 
 function WaitingCardView({ card }: { card: JobCard }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  async function handleNudge(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!card.nudge) return;
+    setBusy(true);
+    const res = await fetch(card.nudge.endpoint, { method: 'POST' });
+    setBusy(false);
+    if (res.ok) {
+      setSent(true);
+      router.refresh();
+    } else {
+      const j = await res.json().catch(() => ({}));
+      alert(j.error ?? 'Could not send the reminder.');
+    }
+  }
+
   return (
-    <Link
-      href={card.detailHref}
-      className="block bg-[#f9fafb] border border-dashed border-[#e5e7eb] rounded-xl p-3 hover:bg-white transition-colors"
-    >
-      <div className="text-[13px] font-medium text-[#6b7280]">{card.clientName}</div>
-      <div className="text-[11px] text-[#9ca3af] font-light mt-0.5">{card.context}</div>
+    <div className="bg-[#f9fafb] border border-dashed border-[#e5e7eb] rounded-xl p-3 hover:bg-white transition-colors">
+      <Link href={card.detailHref} className="block">
+        <div className="text-[13px] font-medium text-[#6b7280]">{card.clientName}</div>
+        <div className="text-[11px] text-[#9ca3af] font-light mt-0.5">{card.context}</div>
+      </Link>
       {card.nudge && (
-        <span className="inline-block mt-1.5 text-[11px] text-[#6b7280] underline">
-          {card.nudge.label}
-        </span>
+        <button
+          onClick={handleNudge}
+          disabled={busy || sent}
+          className="mt-2 text-[11px] text-[#6b7280] hover:text-[#0f0f0f] underline disabled:no-underline disabled:opacity-60"
+        >
+          {sent ? 'Reminder sent ✓' : busy ? 'Sending…' : card.nudge.label}
+        </button>
       )}
-    </Link>
+    </div>
   );
 }
 

@@ -10,7 +10,8 @@ export interface JobCard {
   amount: number | null;
   ago: string | null;
   primary: { label: string; href: string } | null;
-  nudge: { label: string; href: string } | null;
+  // For Waiting cards: an in-place action button (POSTs to endpoint, then refreshes).
+  nudge: { label: string; endpoint: string } | null;
   detailHref: string;
   sortKey: number;
 }
@@ -101,7 +102,7 @@ export function buildJobCards({ projects, quotes, invoices, clients }: BuildJobs
           context: 'Quote sent — waiting for response',
           amount: null, ago: null,
           primary: null,
-          nudge: { label: 'Open job', href: `/dashboard/projects/${p.id}` },
+          nudge: null,
           detailHref: `/dashboard/projects/${p.id}`,
           sortKey: ts(p.created_at),
         });
@@ -128,7 +129,7 @@ export function buildJobCards({ projects, quotes, invoices, clients }: BuildJobs
           context: 'Invoice sent — waiting for payment',
           amount: null, ago: null,
           primary: null,
-          nudge: { label: 'Open job', href: `/dashboard/projects/${p.id}` },
+          nudge: null,
           detailHref: `/dashboard/projects/${p.id}`,
           sortKey: ts(p.created_at),
         });
@@ -176,7 +177,7 @@ export function buildJobCards({ projects, quotes, invoices, clients }: BuildJobs
             context: `Quote sent ${relativeTime(q.sent_at, now)} · $${q.total.toFixed(2)}`,
             amount: null, ago: null,
             primary: null,
-            nudge: { label: 'Send a reminder', href: `/dashboard/quotes/${q.id}` },
+            nudge: { label: 'Send a reminder', endpoint: `/api/quotes/${q.id}/reminder` },
             detailHref: `/dashboard/quotes/${q.id}`,
             sortKey: ts(q.sent_at),
           });
@@ -230,7 +231,7 @@ export function buildJobCards({ projects, quotes, invoices, clients }: BuildJobs
           context: `${sentText} · $${inv.total.toFixed(2)}${overdueText}`,
           amount: null, ago: null,
           primary: null,
-          nudge: { label: 'Send a reminder', href: `/dashboard/invoices/${inv.id}` },
+          nudge: { label: 'Send a reminder', endpoint: `/api/invoices/${inv.id}/reminder` },
           detailHref: `/dashboard/invoices/${inv.id}`,
           sortKey: inv.sent_at ? ts(inv.sent_at) : ts(inv.created_at),
         });
