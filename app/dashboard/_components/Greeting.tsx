@@ -6,10 +6,10 @@ export function Greeting({ firstName }: { firstName: string }) {
 
   return (
     <>
-      <h1 className="text-3xl text-[#0f0f0f] mb-1" style={{ fontFamily: 'var(--font-serif)' }}>
+      <h1 className="text-2xl sm:text-3xl text-[#0f0f0f] mb-0.5" style={{ fontFamily: 'var(--font-serif)' }}>
         {greeting}{name}.
       </h1>
-      <p className="text-[#9ca3af] text-sm font-light mb-10">{date}.</p>
+      <p className="text-[#9ca3af] text-[13px] font-light mb-7">{date}.</p>
     </>
   );
 }
