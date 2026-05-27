@@ -8,7 +8,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('first_name, last_name, trade, logo_url, stripe_connect_onboarded, stripe_connect_account_id')
+    .select('first_name, last_name, trade, logo_url, stripe_connect_onboarded, stripe_connect_account_id, stripe_customer_id, stripe_subscription_id, subscription_status, trial_ends_at')
     .eq('id', user.id)
     .single();
 
