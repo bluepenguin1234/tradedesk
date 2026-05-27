@@ -2,9 +2,10 @@ import { createSupabaseServerClient } from '@/lib/supabase';
 import type { ProjectStatus, QuoteStatus, InvoiceStatus } from '@/types';
 import { Greeting } from './_components/Greeting';
 import { ActionTiles } from './_components/ActionTiles';
-import { Pipeline, type PipelineProject } from './_components/Pipeline';
+import { Pipeline } from './_components/Pipeline';
 import { Coach } from './_components/Coach';
 import { buildSuggestions } from '@/lib/coach';
+import type { PipelineItem } from '@/lib/pipeline';
 
 interface ProjectRow {
   id: string;
@@ -78,16 +79,42 @@ export default async function Dashboard() {
     }
   }
 
-  const pipelineProjects: PipelineProject[] = projects.map(p => ({
-    id: p.id,
-    name: p.name,
-    status: p.status,
-    clients: p.clients,
-    amount:
-      p.status === 'invoiced' || p.status === 'paid'
-        ? latestInvoiceByProject.get(p.id) ?? null
-        : latestQuoteByProject.get(p.id) ?? null,
-  }));
+  // Pipeline items = all projects + orphan quotes + orphan invoices.
+  // Quotes/invoices linked to a project (project_id != null) are represented
+  // by that project's card. Orphans show up as their own cards.
+  const pipelineItems: PipelineItem[] = [
+    ...projects.map<PipelineItem>(p => ({
+      kind: 'project',
+      id: p.id,
+      name: p.name,
+      status: p.status,
+      clients: p.clients,
+      amount:
+        p.status === 'invoiced' || p.status === 'paid'
+          ? latestInvoiceByProject.get(p.id) ?? null
+          : latestQuoteByProject.get(p.id) ?? null,
+    })),
+    ...quotes
+      .filter(q => !q.project_id)
+      .map<PipelineItem>(q => ({
+        kind: 'quote',
+        id: q.id,
+        quote_number: q.quote_number,
+        status: q.status,
+        clients: q.clients,
+        total: q.total,
+      })),
+    ...invoices
+      .filter(i => !i.project_id)
+      .map<PipelineItem>(i => ({
+        kind: 'invoice',
+        id: i.id,
+        invoice_number: i.invoice_number,
+        status: i.status,
+        clients: i.clients,
+        total: i.total,
+      })),
+  ];
 
   const suggestions = buildSuggestions({
     invoices: invoices.map(i => ({
@@ -131,7 +158,7 @@ export default async function Dashboard() {
 
       <Greeting firstName={profile?.first_name ?? ''} />
       <ActionTiles />
-      <Pipeline projects={pipelineProjects} />
+      <Pipeline items={pipelineItems} />
       <Coach suggestions={suggestions} />
     </div>
   );
